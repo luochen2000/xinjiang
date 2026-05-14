@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>北疆大环线 · 9日自驾深度之旅</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=Playfair+Display:wght@600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #f5f2eb;
+            --text: #2c2416;
+            --text-light: #6b5e4a;
+            --accent: #2d6a8a;
+            --gold: #d4a843;
+            --border: #e8e3d7;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            -webkit-font-smoothing: antialiased;
+        }
+        .hero {
+            position: relative;
+            background: linear-gradient(160deg, #1a2c3c 0%, #2d4a5e 40%, #5a7f8f 100%);
+            color: white;
+            padding: 70px 20px 80px;
+            text-align: center;
+            overflow: hidden;
+        }
+        .hero::before { content: ""; position: absolute; top: -60px; left: -60px; width: 350px; height: 350px; background: rgba(255,255,255,0.03); border-radius: 50%; }
+        .hero::after { content: ""; position: absolute; bottom: -70px; right: -50px; width: 400px; height: 400px; background: rgba(255,255,255,0.02); border-radius: 50%; }
+        .hero h1 { font-family: 'Playfair Display','Noto Sans SC',serif; font-size: 3.2rem; letter-spacing: 4px; margin-bottom: 12px; position: relative; z-index: 1; }
+        .hero .subtitle { font-size: 1.25rem; font-weight: 300; opacity: 0.9; letter-spacing: 6px; position: relative; z-index: 1; }
+        .hero .meta { margin-top: 25px; display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; font-size: 0.95rem; font-weight: 300; opacity: 0.85; position: relative; z-index: 1; }
+        .hero .meta span { background: rgba(255,255,255,0.12); padding: 6px 18px; border-radius: 30px; backdrop-filter: blur(4px); }
+        .container { max-width: 1100px; margin: 0 auto; padding: 0 20px; }
+        .map-section { background: white; border-radius: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.08); margin: -40px auto 50px; position: relative; z-index: 10; overflow: hidden; }
+        .map-header { background: #fafaf7; padding: 20px 25px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+        .map-header h2 { font-size: 1.5rem; font-weight: 600; color: var(--accent); }
+        .map-header .badge { background: #e3ecf0; color: var(--accent); padding: 5px 14px; border-radius: 20px; font-size: 0.85rem; }
+        #map { height: 450px; width: 100%; }
+        .map-footer { padding: 15px 25px; background: #fafaf7; border-top: 1px solid var(--border); display: flex; gap: 18px; flex-wrap: wrap; font-size: 0.9rem; color: var(--text-light); }
+        .legend-dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 6px; }
+        .legend-dot.start { background: #2d6a8a; } .legend-dot.stop { background: #d4a843; } .legend-dot.end { background: #c44f4f; }
+        .section-title { font-size: 1.9rem; font-weight: 600; text-align: center; margin: 50px 0 30px; color: var(--accent); letter-spacing: 2px; }
+        .section-title span { background: linear-gradient(180deg, transparent 60%, #c0dde8 60%); padding: 0 6px; }
+        .day-card { background: white; border-radius: 20px; margin-bottom: 32px; box-shadow: 0 8px 30px rgba(0,0,0,0.05); overflow: hidden; display: flex; flex-wrap: wrap; transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .day-card:hover { transform: translateY(-3px); box-shadow: 0 14px 40px rgba(0,0,0,0.1); }
+        .day-card .day-image { width: 360px; min-height: 260px; background-size: cover; background-position: center; position: relative; flex-shrink: 0; cursor: pointer; transition: background-image 0.6s ease; }
+        .day-card .day-image .day-tag { position: absolute; top: 16px; left: 16px; background: rgba(0,0,0,0.55); backdrop-filter: blur(6px); color: white; padding: 4px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 500; z-index: 2; }
+        .day-card .day-image .photo-dots { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; z-index: 2; }
+        .day-card .day-image .photo-dots span { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.55); transition: all 0.3s ease; cursor: pointer; }
+        .day-card .day-image .photo-dots span.active { background: white; width: 10px; height: 10px; box-shadow: 0 0 6px rgba(255,255,255,0.7); }
+        .day-card .day-content { flex: 1; padding: 25px 28px; display: flex; flex-direction: column; justify-content: center; min-width: 280px; }
+        .day-content .day-num { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 3px; color: #a8956a; margin-bottom: 4px; }
+        .day-content h3 { font-size: 1.4rem; margin-bottom: 8px; color: var(--text); }
+        .day-content .route { font-size: 0.9rem; color: var(--text-light); margin-bottom: 10px; }
+        .day-content .desc { font-size: 0.95rem; color: #555; line-height: 1.7; }
+        .day-content .highlight { margin-top: 12px; font-size: 0.88rem; color: var(--accent); font-weight: 500; background: #f2f7f9; padding: 8px 14px; border-radius: 10px; border-left: 3px solid var(--accent); }
+        .day-content .photo-source { margin-top: 8px; font-size: 0.7rem; color: #bbb; }
+        .budget-section { background: white; border-radius: 20px; padding: 35px 30px; margin: 40px 0 50px; box-shadow: 0 8px 30px rgba(0,0,0,0.05); }
+        .budget-section h2 { text-align: center; margin-bottom: 25px; color: var(--accent); }
+        .budget-table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+        .budget-table th { background: #f3f0e8; padding: 12px 15px; text-align: left; font-weight: 600; }
+        .budget-table td { padding: 10px 15px; border-bottom: 1px solid #efebe0; }
+        .budget-table .total-row { font-weight: 700; background: #fafaf5; font-size: 1.05rem; }
+        .tips-box { background: linear-gradient(135deg, #f3f0e8, #fafaf5); border-left: 5px solid var(--gold); border-radius: 0 16px 16px 0; padding: 25px 28px; margin: 30px 0 50px; }
+        .tips-box h3 { margin-bottom: 12px; color: var(--accent); }
+        .tips-box ul { list-style: none; padding-left: 0; }
+        .tips-box ul li { padding: 5px 0; font-size: 0.95rem; }
+        .tips-box ul li::before { content: "\2713 "; color: var(--accent); font-weight: bold; margin-right: 8px; }
+        .packing-section { background: white; border-radius: 20px; padding: 35px 30px; margin: 0 0 40px; box-shadow: 0 8px 30px rgba(0,0,0,0.05); }
+        .packing-section h2 { text-align: center; margin-bottom: 8px; color: var(--accent); }
+        .packing-section .packing-subtitle { text-align: center; font-size: 0.9rem; color: var(--text-light); margin-bottom: 25px; }
+        .packing-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+        .packing-box { border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
+        .packing-box.essential { border-color: var(--accent); background: #f6fafb; }
+        .packing-box.recommended { background: #fdfcf8; }
+        .packing-box h3 { font-size: 1.1rem; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+        .packing-box h3 .badge-e { background: var(--accent); color: white; font-size: 0.7rem; padding: 2px 10px; border-radius: 12px; }
+        .packing-box h3 .badge-r { background: var(--gold); color: white; font-size: 0.7rem; padding: 2px 10px; border-radius: 12px; }
+        .packing-cat { margin-bottom: 14px; }
+        .packing-cat h4 { font-size: 0.88rem; color: var(--accent); margin-bottom: 6px; letter-spacing: 1px; }
+        .packing-cat ul { list-style: none; padding: 0; }
+        .packing-cat ul li { font-size: 0.9rem; padding: 3px 0; color: #555; }
+        .packing-cat ul li::before { content: "☐ "; color: #bbb; margin-right: 4px; }
+        .packing-cat ul li .note { font-size: 0.78rem; color: #999; }
+        .footer { text-align: center; padding: 35px 20px; color: #999; font-size: 0.85rem; }
+        .footer .heart { color: #5a8fa0; }
+
+        @media (max-width: 750px) {
+            .hero { padding: 40px 15px 50px; }
+            .hero h1 { font-size: 1.8rem; letter-spacing: 2px; }
+            .hero .subtitle { font-size: 1rem; letter-spacing: 3px; }
+            .hero .meta { gap: 8px; font-size: 0.82rem; }
+            .hero .meta span { padding: 4px 12px; }
+            .container { padding: 0 12px; }
+            .map-section { margin: -30px 8px 30px; border-radius: 16px; }
+            .map-header { padding: 14px 16px; flex-direction: column; gap: 8px; }
+            .map-header h2 { font-size: 1.2rem; }
+            #map { height: 280px; }
+            .map-footer { padding: 10px 16px; gap: 10px; font-size: 0.8rem; }
+            .section-title { font-size: 1.4rem; margin: 30px 0 20px; }
+            .day-card { border-radius: 14px; margin-bottom: 20px; }
+            .day-card .day-image { width: 100%; height: 200px; }
+            .day-content { padding: 18px 16px; min-width: unset; }
+            .day-content h3 { font-size: 1.15rem; }
+            .day-content .route { font-size: 0.82rem; }
+            .day-content .desc { font-size: 0.88rem; }
+            .day-content .highlight { font-size: 0.82rem; padding: 6px 10px; }
+            .budget-section { padding: 20px 14px; margin: 25px 0 30px; border-radius: 14px; }
+            .budget-table { font-size: 0.8rem; }
+            .budget-table th { padding: 8px 8px; }
+            .budget-table td { padding: 7px 8px; }
+            .tips-box { padding: 18px 16px; margin: 20px 0 30px; }
+            .tips-box ul li { font-size: 0.88rem; }
+            .packing-section { padding: 20px 14px; margin: 0 0 25px; border-radius: 14px; }
+            .packing-grid { grid-template-columns: 1fr; gap: 16px; }
+            .packing-box { padding: 16px; }
+            .footer { padding: 25px 15px; }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="hero">
+        <h1>北疆大环线 · 深度之旅</h1>
+        <p class="subtitle">喀纳斯 · 禾木 · 魔鬼城 · 赛里木湖 · 独库公路</p>
+        <div class="meta">
+            <span>📅 2026.05.30 - 06.07</span>
+            <span>👫 4人 · 两对情侣</span>
+            <span>🚗 自驾GL8</span>
+            <span>📍 约3200公里</span>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="map-section">
+            <div class="map-header">
+                <h2>🗺️ 自驾路线全览</h2>
+                <span class="badge">北疆大环线 · 约3200公里</span>
+            </div>
+            <div id="map"></div>
+            <div class="map-footer">
+                <div><span class="legend-dot start"></span> 起点 / 终点（乌鲁木齐）</div>
+                <div><span class="legend-dot stop"></span> 精华停靠点</div>
+                <div><span class="legend-dot end"></span> 独库公路穿越</div>
+                <div style="margin-left:auto;">点击标记查看详情</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2 class="section-title"><span>📸 每日行程</span></h2>
+
+        <!-- Day 1: 乌鲁木齐休整 -->
+        <div class="day-card">
+            <div class="day-image" id="img-day1" style="background-image: url('https://i.postimg.cc/fRr7cxXv/day1-1.jpg');">
+                <span class="day-tag">🌆 休整适应</span>
+                <div class="photo-dots">
+                    <span class="active" onclick="switchPhoto('day1', 0)"></span>
+                    <span onclick="switchPhoto('day1', 1)"></span>
+                    <span onclick="switchPhoto('day1', 2)"></span>
+                </div>
+            </div>
+            <div class="day-content">
+                <div class="day-num">Day 1 · 5月30日 周六</div>
+                <h3>广州 → 乌鲁木齐（休整）</h3>
+                <div class="route">✈️ 飞行约5.5小时 → 🚗 机场取车</div>
+                <p class="desc">飞抵乌鲁木齐，机场取GL8。不急着赶路，先适应2小时时差。傍晚前往<b>新疆国际大巴扎</b>逛逛，尝烤包子、椒麻鸡、新疆拌面，为后面8天高强度自驾养精蓄锐。</p>
+                <div class="highlight">💡 休整日：飞了一天不赶路，好好吃顿新疆味，养足精神</div>
+                <div class="photo-source">📷 实拍来源：小红书</div>
+            </div>
+        </div>
+
+        <!-- Day 2: 乌鲁木齐→阿勒泰 -->
+        <div class="day-card">
+            <div class="day-image" id="img-day2" style="background-image: url('https://i.postimg.cc/YCsN61gy/day2-1.jpg');">
+                <span class="day-tag">🛣️ 北上阿勒泰</span>
+                <div class="photo-dots">
+                    <span class="active" onclick="switchPhoto('day2', 0)"></span>
+                    <span onclick="switchPhoto('day2', 1)"></span>
+                    <span onclick="switchPhoto('day2', 2)"></span>
+                </div>
+            </div>
+            <div class="day-content">
+                <div class="day-num">Day 2 · 5月31日 周日</div>
+                <h3>乌鲁木齐 → 阿勒泰</h3>
+                <div class="route">🚗 600km · 约7-8小时 · G216</div>
+                <p class="desc">早上8点出发，沿G216一路北上。途经古尔班通古特沙漠边缘，戈壁荒野渐变为草原牧场。两位司机轮换，下午15-16点抵达<b>阿勒泰市</b>，补给物资，早点休息。</p>
+                <div class="highlight">💡 纯赶路日：休息一天后精力充沛，两人轮换无压力</div>
+                <div class="photo-source">📷 实拍来源：小红书</div>
+            </div>
+        </div>
+
+        <!-- Day 3: 阿勒泰→禾木 -->
+        <div class="day-card">
+            <div class="day-image" id="img-day3" style="background-image: url('https://i.postimg.cc/3xcjXgm7/day3-1.jpg');">
+                <span class="day-tag">🏡 神的自留地</span>
+                <div class="photo-dots">
+                    <span class="active" onclick="switchPhoto('day3', 0)"></span>
+                    <span onclick="switchPhoto('day3', 1)"></span>
+                </div>
+            </div>
+            <div class="day-content">
+                <div class="day-num">Day 3 · 6月1日 周一</div>
+                <h3>阿勒泰 → 禾木村</h3>
+                <div class="route">🚗 200km · 约3.5小时（含盘山路）</div>
+                <p class="desc">上午出发，中午前抵达<b>禾木村</b>——"神的自留地"。下午充裕时间漫步村中：<b>禾木河</b>奶绿色的水流两岸白桦林；走过标志性的<b>禾木桥</b>；傍晚爬上<b>观景台</b>，俯瞰全村木屋炊烟，日落约21:00。</p>
+                <div class="highlight">💡 情侣时刻：日落时站在观景台，看整个村庄被金色光线笼罩，炊烟袅袅</div>
+                <div class="photo-source">📷 实拍来源：小红书</div>
+            </div>
+        </div>
+
+        <!-- Day 4: 禾木→喀纳斯 -->
+        <div class="day-card">
+            <div class="day-image" id="img-day4" style="background-image: url('https://i.postimg.cc/HL8wBV4f/day4-1.jpg');">
+                <span class="day-tag">💧 人间仙境</span>
+                <div class="photo-dots">
+                    <span class="active" onclick="switchPhoto('day4', 0)"></span>
+                    <span onclick="switchPhoto('day4', 1)"></span>
+                    <span onclick="switchPhoto('day4', 2)"></span>
+                </div>
+            </div>
+            <div class="day-content">
+                <div class="day-num">Day 4 · 6月2日 周二</div>
+                <h3>禾木 → 喀纳斯湖</h3>
+                <div class="route">🚗 60km · 约1.5小时</div>
+                <p class="desc">全天游览<b>喀纳斯湖</b>。乘区间车逐站下车看<b>三湾</b>：神仙湾、月亮湾、卧龙湾，水色随光线在翠绿与宝蓝间变幻。下午挑战<b>观鱼台</b>1068级台阶，登顶俯瞰喀纳斯湖全貌，壮阔无比。</p>
+                <div class="highlight">💡 情侣时刻：月亮湾碧水弯月前，两人同框拍一组仙境照</div>
+                <div class="photo-source">📷 实拍来源：小红书</div>
+            </div>
+        </div>
+
+        <!-- Day 5: 喀纳斯→魔鬼城 -->
+        <div class="day-card">
+            <div class="day-image" id="img-day5" style="background-image: url('https://i.postimg.cc/Zqv8VCxT/day5-1.jpg');">
+                <span class="day-tag">🏜️ 风蚀城堡</span>
+                <div class="photo-dots">
+                    <span class="active" onclick="switchPhoto('day5', 0)"></span>
+                    <span onclick="switchPhoto('day5', 1)"></span>
+                    <span onclick="switchPhoto('day5', 2)"></span>
+                </div>
+            </div>
+            <div class="day-content">
+                <div class="day-num">Day 5 · 6月3日 周三</div>
+                <h3>喀纳斯 → 布尔津 → 魔鬼城</h3>
+                <div class="route">🚗 450km · 约5.5小时</div>
+                <p class="desc">上午出发，途经<b>布尔津</b>午餐（河堤烤鱼值得一试）。傍晚抵达<b>世界魔鬼城</b>（乌尔禾雅丹地貌），乘小火车穿行风蚀城堡群。日落约21:00时岩石呈金红色，光影极其震撼。</p>
+                <div class="highlight">💡 情侣时刻：魔鬼城夕阳下，风声呼啸中站在"城堡"顶端，像世界尽头</div>
+                <div class="photo-source">📷 实拍来源：小红书</div>
+            </div>
+        </div>
+
+        <!-- Day 6: 魔鬼城→赛里木湖 -->
+        <div class="day-card">
+            <div class="day-image" id="img-day6" style="background-image: url('https://i.postimg.cc/MGf7dvmv/day6-1.jpg');">
+                <span class="day-tag">💧 大西洋最后一滴眼泪</span>
+                <div class="photo-dots">
+                    <span class="active" onclick="switchPhoto('day6', 0)"></span>
+                    <span onclick="switchPhoto('day6', 1)"></span>
+                    <span onclick="switchPhoto('day6', 2)"></span>
+                </div>
+            </div>
+            <div class="day-content">
+                <div class="day-num">Day 6 · 6月4日 周四</div>
+                <h3>克拉玛依 → 赛里木湖</h3>
+                <div class="route">🚗 450km · 约5小时</div>
+                <p class="desc">下午抵达<b>赛里木湖</b>——"大西洋最后一滴眼泪"。购票自驾环湖，海拔2070m，湖水蓝得不真实。去南岸<b>松树头</b>等日落，湖面染成金色。6月湖畔野花盛开，入住<b>房车营地</b>。</p>
+                <div class="highlight">💡 情侣时刻：夜晚裹毯子在房车外看银河，赛湖星空清澈无比</div>
+                <div class="photo-source">📷 实拍来源：小红书</div>
+            </div>
+        </div>
+
+        <!-- Day 7: 赛里木湖→那拉提 -->
+        <div class="day-card">
+            <div class="day-image" id="img-day7" style="background-image: url('https://i.postimg.cc/vmxr3ctV/day7-1.jpg');">
+                <span class="day-tag">🏔️ 空中草原</span>
+                <div class="photo-dots">
+                    <span class="active" onclick="switchPhoto('day7', 0)"></span>
+                    <span onclick="switchPhoto('day7', 1)"></span>
+                    <span onclick="switchPhoto('day7', 2)"></span>
+                    <span onclick="switchPhoto('day7', 3)"></span>
+                </div>
+            </div>
+            <div class="day-content">
+                <div class="day-num">Day 7 · 6月5日 周五</div>
+                <h3>赛里木湖 → 果子沟 → 那拉提</h3>
+                <div class="route">🚗 400km · 约5.5小时</div>
+                <p class="desc">上午再看一眼赛湖晨光，然后经<b>果子沟大桥</b>——桥面距谷底200m，雪山间银龙飞渡。下午抵达<b>那拉提空中草原</b>（海拔2200m），雪山、森林、河流交织，哈萨克毡房点缀。可体验<b>骑马</b>（约80-100元/人/小时）。</p>
+                <div class="highlight">💡 情侣时刻：找一片开阔草坡铺野餐垫，面朝雪山发呆</div>
+                <div class="photo-source">📷 实拍来源：小红书</div>
+            </div>
+        </div>
+
+        <!-- Day 8: 独库公路 -->
+        <div class="day-card">
+            <div class="day-image" id="img-day8" style="background-image: url('https://i.postimg.cc/KzXnVx04/day8-1.jpg');">
+                <span class="day-tag">🛣️ 一日四季</span>
+                <div class="photo-dots">
+                    <span class="active" onclick="switchPhoto('day8', 0)"></span>
+                    <span onclick="switchPhoto('day8', 1)"></span>
+                    <span onclick="switchPhoto('day8', 2)"></span>
+                    <span onclick="switchPhoto('day8', 3)"></span>
+                </div>
+            </div>
+            <div class="day-content">
+                <div class="day-num">Day 8 · 6月6日 周六</div>
+                <h3>那拉提 → 独库公路 → 乌鲁木齐</h3>
+                <div class="route">🚗 550km · 边走边玩约8小时</div>
+                <p class="desc">早起驶入<b>独库公路北段</b>——"中国最美公路"，每年仅开放4个月。一日四季：草原→雪山→峡谷→森林。翻越海拔3400m的<b>哈希勒根达坂</b>，6月仍有积雪。途经<b>乔尔玛烈士陵园</b>致敬筑路英雄，傍晚返回乌鲁木齐。</p>
+                <div class="highlight">💡 情侣时刻：哈希勒根达坂雪山背景下拍"雪山情侣大片"</div>
+                <div class="photo-source">📷 实拍来源：小红书</div>
+            </div>
+        </div>
+
+        <!-- Day 9: 返程 -->
+        <div class="day-card">
+            <div class="day-image" id="img-day9" style="background-image: url('https://i.postimg.cc/DZVqDnxg/day9-1.jpg');">
+                <span class="day-tag">✈️ 返程</span>
+                <div class="photo-dots">
+                    <span class="active" onclick="switchPhoto('day9', 0)"></span>
+                    <span onclick="switchPhoto('day9', 1)"></span>
+                </div>
+            </div>
+            <div class="day-content">
+                <div class="day-num">Day 9 · 6月7日 周日</div>
+                <h3>乌鲁木齐 → 广州</h3>
+                <div class="route">🚗 机场还车 → ✈️ 返回广州</div>
+                <p class="desc">根据航班时间前往机场还车，结束9天北疆大环线之旅。带着喀纳斯的翠、禾木的静、魔鬼城的奇、赛里木湖的蓝和独库公路的壮，满载而归。前一晚在大巴扎附近买些干果、奶疙瘩等伴手礼。</p>
+                <div class="highlight">💡 小贴士：建议预订下午航班，上午还有时间自由安排</div>
+                <div class="photo-source">📷 实拍来源：小红书</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 预算 -->
+    <div class="container">
+        <div class="budget-section">
+            <h2>💰 4人自驾预算概览</h2>
+            <table class="budget-table">
+                <thead>
+                    <tr><th>项目</th><th>4人总费用（元）</th><th>备注</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>往返机票（广州-乌鲁木齐）</td><td>13,000 - 15,000</td><td>4人总机票</td></tr>
+                    <tr><td>GL8租车9天 + 油费过路费</td><td>约 12,000</td><td>含无忧险，总里程~3200km</td></tr>
+                    <tr><td>住宿8晚（2间）</td><td>约 10,000</td><td>房车营地+景区木屋+品质酒店</td></tr>
+                    <tr><td>餐饮</td><td>约 6,000</td><td>含特色餐厅</td></tr>
+                    <tr><td>门票 + 区间车</td><td>约 4,200</td><td>喀纳斯+禾木+赛湖+那拉提+魔鬼城</td></tr>
+                    <tr class="total-row"><td><strong>合计</strong></td><td><strong>约 45,200 - 47,200</strong></td><td></td></tr>
+                    <tr class="total-row"><td><strong>人均</strong></td><td><strong>约 11,300 - 11,800</strong></td><td></td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="tips-box">
+            <h3>⚠️ 自驾安全手册</h3>
+            <ul>
+                <li><strong>独库公路确认：</strong>出发前关注"平安独山子"官方账号确认通车情况</li>
+                <li><strong>油量管理：</strong>油箱过半即补满，禾木/喀纳斯山区加油站少，进独库前在那拉提加满</li>
+                <li><strong>控制车速：</strong>新疆区间测速极多，务必开启导航电子狗</li>
+                <li><strong>应急储备：</strong>车上常备矿泉水、馕饼、水果；厚冲锋衣放顺手位</li>
+                <li><strong>离线准备：</strong>禾木/喀纳斯/独库部分路段无信号，提前下载离线地图</li>
+                <li><strong>山路驾驶：</strong>禾木盘山路弯多坡陡，雨天减速；独库不允许夜间通行</li>
+                <li><strong>时差注意：</strong>新疆日落约21:00-21:30，体感比北京时间晚2小时，注意作息</li>
+            </ul>
+        </div>
+
+        <h2 class="section-title"><span>🎒 行李清单</span></h2>
+        <p style="text-align:center;font-size:0.9rem;color:#6b5e4a;margin-bottom:25px;">6月北疆温差极大：城市30°C → 赛湖夜间5°C → 达坂0°C，务必分层穿搭</p>
+
+        <div class="packing-section">
+            <div class="packing-grid">
+                <div class="packing-box essential">
+                    <h3><span class="badge-e">必备</span> 衣物穿搭</h3>
+                    <div class="packing-cat">
+                        <h4>防寒层</h4>
+                        <ul>
+                            <li>冲锋衣（防风防雨） <span class="note">— 赛湖/独库达坂必备</span></li>
+                            <li>轻薄羽绒服或抓绒衣 <span class="note">— 禾木/喀纳斯夜晚5-10°C</span></li>
+                        </ul>
+                    </div>
+                    <div class="packing-cat">
+                        <h4>日常层</h4>
+                        <ul>
+                            <li>长袖T恤/衬衫 × 3-4件</li>
+                            <li>长裤 × 2-3条 <span class="note">— 草原蚊虫多，不建议短裤</span></li>
+                            <li>短袖 × 2-3件 <span class="note">— 乌鲁木齐/克拉玛依白天30°C</span></li>
+                        </ul>
+                    </div>
+                    <div class="packing-cat">
+                        <h4>鞋</h4>
+                        <ul>
+                            <li>防水徒步鞋 <span class="note">— 观鱼台1068级台阶、草原湿地</span></li>
+                            <li>拖鞋/凉鞋 <span class="note">— 房车营地、酒店</span></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="packing-box essential">
+                    <h3><span class="badge-e">必备</span> 防晒 & 护肤</h3>
+                    <div class="packing-cat">
+                        <ul>
+                            <li>防晒霜 SPF50+ <span class="note">— 高海拔紫外线极强，2小时补涂</span></li>
+                            <li>墨镜（偏光） <span class="note">— 湖面/雪山反光刺眼</span></li>
+                            <li>遮阳帽/防晒面罩</li>
+                            <li>润唇膏 <span class="note">— 新疆极干燥</span></li>
+                            <li>保湿面霜/身体乳</li>
+                            <li>补水面膜 <span class="note">— 每晚敷一片急救</span></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="packing-box essential">
+                    <h3><span class="badge-e">必备</span> 电子 & 证件</h3>
+                    <div class="packing-cat">
+                        <ul>
+                            <li>身份证 <span class="note">— 新疆检查站多，随身携带</span></li>
+                            <li>驾照（两位司机）</li>
+                            <li>手机 + 充电宝 × 2 <span class="note">— 山区无信号费电快</span></li>
+                            <li>车载手机支架 + 充电线</li>
+                            <li>相机/GoPro + 存储卡 + 备用电池</li>
+                            <li>离线地图（提前下载） <span class="note">— 禾木/喀纳斯/独库无信号</span></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="packing-box essential">
+                    <h3><span class="badge-e">必备</span> 药品 & 应急</h3>
+                    <div class="packing-cat">
+                        <ul>
+                            <li>感冒药 <span class="note">— 温差大容易着凉</span></li>
+                            <li>肠胃药 <span class="note">— 饮食偏油腻辛辣</span></li>
+                            <li>晕车药 <span class="note">— 禾木盘山路弯多</span></li>
+                            <li>创可贴 / 碘伏棉片</li>
+                            <li>防蚊喷雾 <span class="note">— 草原/河谷蚊虫凶猛</span></li>
+                            <li>葡萄糖/巧克力 <span class="note">— 独库达坂海拔3400m</span></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="packing-box recommended">
+                    <h3><span class="badge-r">建议</span> 舒适加分</h3>
+                    <div class="packing-cat">
+                        <ul>
+                            <li>U型枕 + 眼罩 <span class="note">— 长途赶路副驾补觉</span></li>
+                            <li>保温杯 <span class="note">— 山区喝热水续命</span></li>
+                            <li>湿纸巾/免洗洗手液</li>
+                            <li>一次性马桶垫 <span class="note">— 景区厕所条件参差</span></li>
+                            <li>零食大礼包 <span class="note">— 馕饼+牛肉干+水果</span></li>
+                            <li>暖宝宝 × 若干 <span class="note">— 赛湖房车夜间保暖</span></li>
+                            <li>毯子/薄睡袋 <span class="note">— 房车营地可能不够暖</span></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="packing-box recommended">
+                    <h3><span class="badge-r">建议</span> 拍照出片</h3>
+                    <div class="packing-cat">
+                        <ul>
+                            <li>浅色长裙/纱巾 <span class="note">— 草原湖边拍照神器</span></li>
+                            <li>红色/亮色外套 <span class="note">— 雪山戈壁对比色出片</span></li>
+                            <li>三脚架/自拍杆</li>
+                            <li>无人机 <span class="note">— 喀纳斯/赛湖航拍绝美（注意禁飞区）</span></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p class="heart">🏔️ 一次看尽北疆精华——湖泊、雪山、草原、古村、雅丹、峡谷。</p>
+        <p style="margin-top:8px;">北疆大环线深度之旅 · 广州出发 · 2026年5月30日 - 6月7日</p>
+        <p style="margin-top:4px;font-size:0.75rem;color:#bbb;">景点图片来自小红书实拍 · 仅用于旅行规划展示</p>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // ========== 图片数据（占位，后续替换） ==========
+        const photoData = {
+            day1: [
+                'https://i.postimg.cc/fRr7cxXv/day1-1.jpg',
+                'https://i.postimg.cc/bwB0xQb4/day1-2.jpg',
+                'https://i.postimg.cc/t4Md3hPc/day1-3.jpg'
+            ],
+            day2: [
+                'https://i.postimg.cc/YCsN61gy/day2-1.jpg',
+                'https://i.postimg.cc/9QnPdGTv/day2-2.jpg',
+                'https://i.postimg.cc/vZN7rWfw/day2-3.jpg'
+            ],
+            day3: [
+                'https://i.postimg.cc/3xcjXgm7/day3-1.jpg',
+                'https://i.postimg.cc/QMKQ0Hkw/day3-2.jpg'
+            ],
+            day4: [
+                'https://i.postimg.cc/HL8wBV4f/day4-1.jpg',
+                'https://i.postimg.cc/W4qGXhwR/day4-2.jpg',
+                'https://i.postimg.cc/yN3mvkyz/day4-3.jpg'
+            ],
+            day5: [
+                'https://i.postimg.cc/Zqv8VCxT/day5-1.jpg',
+                'https://i.postimg.cc/N026p5kG/day5-2.jpg',
+                'https://i.postimg.cc/g0LVNnHk/day5-3.jpg'
+            ],
+            day6: [
+                'https://i.postimg.cc/MGf7dvmv/day6-1.jpg',
+                'https://i.postimg.cc/fbScBJft/day6-2.jpg',
+                'https://i.postimg.cc/Zqv8VCxy/day6-3.jpg'
+            ],
+            day7: [
+                'https://i.postimg.cc/vmxr3ctV/day7-1.jpg',
+                'https://i.postimg.cc/tgn32YN6/day7-2.jpg',
+                'https://i.postimg.cc/N026p5km/day7-3.jpg',
+                'https://i.postimg.cc/zBmnM8xB/day7-4.jpg'
+            ],
+            day8: [
+                'https://i.postimg.cc/KzXnVx04/day8-1.jpg',
+                'https://i.postimg.cc/pTND7Rs5/day8-2.jpg',
+                'https://i.postimg.cc/gJ9v5mgh/day8-3.jpg',
+                'https://i.postimg.cc/tT0hfpB3/day8-4.jpg'
+            ],
+            day9: [
+                'https://i.postimg.cc/DZVqDnxg/day9-1.jpg',
+                'https://i.postimg.cc/26p4Jr02/day9-2.jpg'
+            ]
+        };
+
+        function initPhotos() {
+            for (let i = 1; i <= 9; i++) {
+                const dayKey = 'day' + i;
+                const imgEl = document.getElementById('img-' + dayKey);
+                if (imgEl && photoData[dayKey] && photoData[dayKey].length > 0) {
+                    imgEl.setAttribute('data-current', '0');
+                    imgEl.setAttribute('data-day', dayKey);
+                }
+            }
+        }
+
+        function switchPhoto(dayKey, index) {
+            const imgEl = document.getElementById('img-' + dayKey);
+            if (!imgEl || !photoData[dayKey] || index >= photoData[dayKey].length) return;
+            imgEl.style.backgroundImage = "url('" + photoData[dayKey][index] + "')";
+            imgEl.setAttribute('data-current', index);
+            const dots = imgEl.querySelectorAll('.photo-dots span');
+            dots.forEach((dot, i) => dot.classList.toggle('active', i === index));
+        }
+
+        function startAutoSlideshow() {
+            const allCards = document.querySelectorAll('.day-card');
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    const imgEl = entry.target.querySelector('.day-image');
+                    if (!imgEl) return;
+                    const dayKey = imgEl.getAttribute('data-day');
+                    if (!dayKey || !photoData[dayKey] || photoData[dayKey].length <= 1) return;
+                    if (entry.isIntersecting) {
+                        if (!imgEl._slideTimer) {
+                            imgEl._slideTimer = setInterval(() => {
+                                const current = parseInt(imgEl.getAttribute('data-current') || '0');
+                                const next = (current + 1) % photoData[dayKey].length;
+                                switchPhoto(dayKey, next);
+                            }, 4000);
+                        }
+                    } else {
+                        if (imgEl._slideTimer) {
+                            clearInterval(imgEl._slideTimer);
+                            imgEl._slideTimer = null;
+                        }
+                    }
+                });
+            }, { threshold: 0.3 });
+            allCards.forEach(card => observer.observe(card));
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            initPhotos();
+            startAutoSlideshow();
+        });
+
+        // ========== Leaflet 地图 ==========
+        const map = L.map('map').setView([45.0, 85.0], 6);
+        L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
+            attribution: '&copy; 高德地图',
+            subdomains: '1234',
+            maxZoom: 18
+        }).addTo(map);
+
+        const locations = [
+            { name: '乌鲁木齐（起点/终点）', lat: 43.8256, lng: 87.6168, type: 'start' },
+            { name: '阿勒泰', lat: 47.8500, lng: 88.1400, type: 'stop' },
+            { name: '禾木村', lat: 48.8500, lng: 87.0200, type: 'stop' },
+            { name: '喀纳斯湖', lat: 48.9600, lng: 87.0100, type: 'stop' },
+            { name: '布尔津', lat: 47.7000, lng: 86.8600, type: 'pass' },
+            { name: '乌尔禾魔鬼城', lat: 46.0900, lng: 85.6900, type: 'stop' },
+            { name: '赛里木湖', lat: 44.6000, lng: 81.1670, type: 'stop' },
+            { name: '果子沟大桥', lat: 44.4700, lng: 81.1200, type: 'pass' },
+            { name: '那拉提草原', lat: 43.3800, lng: 84.0000, type: 'stop' },
+            { name: '乔尔玛（独库公路）', lat: 43.6500, lng: 84.3500, type: 'pass' },
+            { name: '哈希勒根达坂', lat: 44.1000, lng: 84.8000, type: 'pass' },
+        ];
+
+        const startIcon = L.divIcon({
+            className: 'custom-icon',
+            html: '<div style="background:#2d6a8a;color:white;border-radius:50%;width:24px;height:24px;text-align:center;line-height:24px;font-size:12px;box-shadow:0 2px 8px rgba(0,0,0,0.3);">起</div>',
+            iconSize: [24, 24], iconAnchor: [12, 12]
+        });
+        const stopIcon = L.divIcon({
+            className: 'custom-icon',
+            html: '<div style="background:#d4a843;color:white;border-radius:50%;width:20px;height:20px;text-align:center;line-height:20px;font-size:10px;box-shadow:0 2px 8px rgba(0,0,0,0.3);">●</div>',
+            iconSize: [20, 20], iconAnchor: [10, 10]
+        });
+        const passIcon = L.divIcon({
+            className: 'custom-icon',
+            html: '<div style="background:#8b7355;color:white;border-radius:50%;width:14px;height:14px;text-align:center;line-height:14px;font-size:8px;box-shadow:0 2px 6px rgba(0,0,0,0.3);">▪</div>',
+            iconSize: [14, 14], iconAnchor: [7, 7]
+        });
+
+        locations.forEach(loc => {
+            let icon = loc.type === 'start' ? startIcon : loc.type === 'stop' ? stopIcon : passIcon;
+            L.marker([loc.lat, loc.lng], { icon: icon }).addTo(map).bindPopup('<b>' + loc.name + '</b>');
+        });
+
+        // 路线：乌鲁木齐→阿勒泰→禾木→喀纳斯→布尔津→魔鬼城→赛里木湖→那拉提→独库→乌鲁木齐
+        const routeLines = [
+            [[43.8256, 87.6168], [47.8500, 88.1400]],
+            [[47.8500, 88.1400], [48.8500, 87.0200], [48.9600, 87.0100]],
+            [[48.9600, 87.0100], [47.7000, 86.8600], [46.0900, 85.6900]],
+            [[46.0900, 85.6900], [44.6000, 81.1670]],
+            [[44.6000, 81.1670], [44.4700, 81.1200], [43.3800, 84.0000]],
+            [[43.3800, 84.0000], [43.6500, 84.3500], [44.1000, 84.8000], [43.8256, 87.6168]],
+        ];
+        routeLines.forEach(line => {
+            L.polyline(line, { color: '#2d6a8a', weight: 3.5, opacity: 0.7, dashArray: '8, 6', smoothFactor: 1 }).addTo(map);
+        });
+
+        // 独库公路高亮
+        const dukuLine = [[43.3800, 84.0000], [43.6500, 84.3500], [44.1000, 84.8000]];
+        L.polyline(dukuLine, { color: '#c44f4f', weight: 4, opacity: 0.8, dashArray: '4, 8', smoothFactor: 1 })
+            .addTo(map)
+            .bindPopup('<b>独库公路北段</b><br>一日四季 · 最美景观大道');
+
+        const allCoords = locations.map(l => [l.lat, l.lng]);
+        map.fitBounds(allCoords, { padding: [40, 40] });
+    </script>
+
+</body>
+</html>
